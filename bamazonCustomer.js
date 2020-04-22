@@ -1,6 +1,7 @@
 var mysql = require("mysql");
 var inquirer = require("inquirer");
 
+var item = [];
 
 var connection = mysql.createConnection({
     host: "localhost",
@@ -17,9 +18,16 @@ connection.connect(function(err) {
     showAllProducts();
 })
 
+//shows all the products
 function showAllProducts() {
     connection.query("select * from products", function(err, res) {
         if (err) throw err;
+
+        for (var i = 0; i < res.length; i++) {
+            var temp = res[i].id;
+            item.push(temp.toString());
+        }
+        item.push("Leave");
 
         console.log("item_id" + " | " + "product_name" + " | " + "department_name" + " | " + "price" + " | " + "stock_quantity");
         for (var i = 0; i < res.length; i++) {
@@ -33,22 +41,42 @@ function showAllProducts() {
 function addToCart() {
     inquirer.prompt({
         name: "iditem",
-        type: "input",
-        message: "What is the id of the item you would like to purchase?[Quit with Q]"
+        type: "list",
+        message: "What is the item you would like to purchase?",
+        choices: item
     }).then(function(answer) {
-        //connection.query()
-        if (answer.iditem === "q" || answer.iditem === "Q") {
-            connection.end();
-            return
-        } else if (answer.iditem) {
+        connection.query("select * from products", function(err, res) {
+            if (err) throw err;
 
-            showAllProducts();
+            if (answer.iditem === "Leave") {
+                connection.end();
+            } else if (answer.iditem) {
+                var temp = parseInt(answer.iditem, 10);
+                inquirer.prompt({
+                    name: "quantity",
+                    type: "input",
+                    message: "How many would you like out of: " + res[temp].stock_quantity + "?[Quit with Q]"
+                }).then(function(quant) {
+                    console.log(quant.quantity);
+                    if (quant.quantity <= res[temp].stock_quantity) {
 
-        }
+                        showAllProducts();
+                    } else if (quant === "Q" || quant === "q") {
+                        connection.end();
+                    } else {
+                        console.log("Sorry that's and invalid number");
+                        addToCart();
+                    }
+                })
+            }
+        })
     })
 }
 
+
+
 //formats the products to make them look organized
+
 // function format(int, query) {
 //     var Length = 0;
 //     var spaces = " ";
