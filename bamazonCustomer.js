@@ -50,21 +50,45 @@ function addToCart() {
 
             if (answer.iditem === "Leave") {
                 connection.end();
+
             } else if (answer.iditem) {
-                var temp = parseInt(answer.iditem, 10);
+                var temp = parseInt(answer.iditem, 10) - 1;
+                console.log("You selected " + res[temp].product_name + "!");
                 inquirer.prompt({
                     name: "quantity",
                     type: "input",
-                    message: "How many would you like out of: " + res[temp].stock_quantity + "?[Quit with Q]"
+                    message: "How many would you like?[Quit with Q]\ntotal: " + res[temp].stock_quantity + "\nPrice: " + res[temp].price + "\n"
                 }).then(function(quant) {
-                    console.log(quant.quantity);
                     if (quant.quantity <= res[temp].stock_quantity) {
 
-                        showAllProducts();
-                    } else if (quant === "Q" || quant === "q") {
+                        var updateStock = res[temp].stock_quantity - quant.quantity;
+                        var num = answer.iditem;
+
+                        update(updateStock, num);
+
+                        var price = parseInt(res[temp].price);
+                        var total = quant.quantity * price;
+
+                        console.log("Your total is: $" + total);
+                        inquirer.prompt({
+                            name: "stay",
+                            type: "list",
+                            message: "Would you like to leave or keep shopping?",
+                            choices: ["Keep Shopping", "Leave"]
+                        }).then(function(order) {
+                            if (order.stay === "Keep Shopping") {
+                                showAllProducts();
+                            } else {
+                                connection.end();
+                            }
+
+                        })
+                    } else if (quant.quantity === "Q" || quant.quantity === "q") {
+
                         connection.end();
                     } else {
-                        console.log("Sorry that's and invalid number");
+
+                        console.log("Insufficient Quantity");
                         addToCart();
                     }
                 })
@@ -73,7 +97,11 @@ function addToCart() {
     })
 }
 
-
+function update(updateStock, num) {
+    connection.query("UPDATE products SET stock_quantity = ? WHERE id = ?", [updateStock, num], (err) => {
+        if (err) throw err;
+    });
+}
 
 //formats the products to make them look organized
 
